@@ -45,115 +45,111 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('类别', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _categories.map((category) {
-                      return ChoiceChip(
-                        label: Text(category),
-                        selected: _selectedCategory == category,
-                        selectedColor: Colors.blueGrey,
-                        labelStyle: TextStyle(
-                          color: _selectedCategory == category
-                              ? Colors.white
-                              : Colors.black,
-                        ),
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategory = category;
-                          });
-                        },
-                        shape: const StadiumBorder(),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('类别', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _categories.map((category) {
+                        final Map<String, IconData> categoryIcons = {
+                          '餐饮': Icons.restaurant,
+                          '交通': Icons.directions_car,
+                          '购物': Icons.shopping_cart,
+                          '娱乐': Icons.movie,
+                          '其他': Icons.more_horiz,
+                        };
+                        return ChoiceChip(
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                categoryIcons[category],
+                                size: 18,
+                                color: _selectedCategory == category
+                                    ? Colors.white
+                                    : Theme.of(context).colorScheme.onSurface,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(category),
+                            ],
+                          ),
+                          selected: _selectedCategory == category,
+                          selectedColor: Theme.of(context).colorScheme.primary,
+                          labelStyle: TextStyle(
+                            color: _selectedCategory == category
+                                ? Colors.white
+                                : Theme.of(context).colorScheme.onSurface,
+                          ),
+                          showCheckmark: false,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedCategory = category;
+                            });
+                          },
+                          shape: const StadiumBorder(),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               ),
               ListTile(
-                title: const Text('时间'),
+                title: const Text('时间', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 subtitle: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: _selectDate,
               ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _noteController,
-                decoration: const InputDecoration(labelText: '备注'),
+                decoration: const InputDecoration(
+                  labelText: '备注',
+                  border: OutlineInputBorder(),
+                ),
                 maxLength: 50,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextFormField(
-                  controller: _amountController,
-                  autofocus: true,
-                  focusNode: _amountFocusNode,
-                  keyboardType: TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: false,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d+\.?\d{0,2}'),
-                    ),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: '金额',
-                    floatingLabelBehavior: FloatingLabelBehavior.always,
-                    prefixIcon: const Icon(Icons.currency_yuan, size: 24),
-                    hintText: '0.00',
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.surfaceVariant,
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 2.0,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 18, horizontal: 16),
-                    errorStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  textAlign: TextAlign.end,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return '请输入金额';
-                    if (double.tryParse(value) == null) return '请输入有效数字';
-                    return null;
-                  },
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _amountController,
+                autofocus: true,
+                focusNode: _amountFocusNode,
+                keyboardType: TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: false,
                 ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d+\.?\d{0,2}'),
+                  ),
+                ],
+                decoration: InputDecoration(
+                  labelText: '金额',
+                  prefixIcon: const Icon(Icons.currency_yuan),
+                  hintText: '0.00',
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                  border: const OutlineInputBorder(),
+                ),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.end,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return '请输入金额';
+                  if (double.tryParse(value) == null) return '请输入有效数字';
+                  return null;
+                },
               ),
-              const SizedBox(height: 20),
-              const Spacer(),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {

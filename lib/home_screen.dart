@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,7 +10,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'expense_model.dart';
 import 'add_expense_screen.dart';
 
-const mainColor = Color.fromARGB(255, 246, 232, 232);
+const mainColor = Color.fromARGB(255, 247, 236, 236);
+
+
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -96,6 +102,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _navigateToPieChartScreen() {
+    final entity = {
+      'PartitionKey': 'partition1', // Replace with your partition key
+      'RowKey': 'row1',             // Replace with your row key
+      'Name': 'John Doe',           // Replace with your entity data
+      'Age': 30,                    // Replace with your entity data
+    };
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PieChartScreen(expenses: _expenses, selectedMonth: _selectedMonth),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final groupedExpenses = _groupExpensesByDate();
@@ -128,6 +149,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.pie_chart),
+            onPressed: _navigateToPieChartScreen,
+          ),
+        ],
       ),
       body: Container(
         color: mainColor,
@@ -150,17 +177,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             DateFormat('MM-dd').format(entry.key),
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              fontWeight: FontWeight.normal,
                               color: Colors.grey[600],
                             ),
                           ),
                           Text(
-                            '¥${entry.value.fold(0.0, (sum, e) => sum + e.amount).toStringAsFixed(2)}',
+                            '支:${entry.value.fold(0.0, (sum, e) => sum + e.amount).toStringAsFixed(2)}',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red[700],
+                              fontSize: 14,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.grey[600],
                             ),
                           ),
                         ],
@@ -206,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             '¥${expense.amount.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.normal,
                               color: Colors.red[700],
                             ),
                           ),
@@ -221,14 +248,64 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blue,
         onPressed: () async {
-          final result = await Navigator.push<Expense?>(
-            context,
-            MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
+          final result = await showModalBottomSheet<Expense?>(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => const AddExpenseScreen(),
           );
           if (result != null) _addExpense(result);
         },
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, size: 30, color: Colors.white,),
+      ),
+    );
+  }
+}
+
+class PieChartScreen extends StatelessWidget {
+  final List<Expense> expenses;
+  final DateTime selectedMonth;
+
+  const PieChartScreen({Key? key, required this.expenses, required this.selectedMonth}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryTotals = <String, double>{};
+    double totalAmount = 0;
+
+    for (var expense in expenses.where((e) =>
+        e.time.month == selectedMonth.month &&
+        e.time.year == selectedMonth.year)) {
+      categoryTotals[expense.category] =
+          (categoryTotals[expense.category] ?? 0) + expense.amount;
+      totalAmount += expense.amount;
+    }
+
+    final pieSections = categoryTotals.entries.map((entry) {
+      final percentage = (entry.value / totalAmount) * 100;
+      final color = Colors.primaries[categoryTotals.keys.toList().indexOf(entry.key) % Colors.primaries.length];
+      return PieChartSectionData(
+        color: color,
+        value: entry.value,
+        title: '${entry.key}\n${percentage.toStringAsFixed(1)}%',
+        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+      );
+    }).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('分类支出饼图'),
+        backgroundColor: Colors.blue,
+      ),
+      body: Center(
+        child: PieChart(
+          PieChartData(
+            sections: pieSections,
+            centerSpaceRadius: 40,
+            sectionsSpace: 2,
+          ),
+        ),
       ),
     );
   }
