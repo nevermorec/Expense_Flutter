@@ -89,10 +89,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 maxLength: 50,
               ),
               Container(
-                height: 80,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextFormField(
                   controller: _amountController,
+                  autofocus: true,
+                  focusNode: _amountFocusNode,
                   keyboardType: TextInputType.numberWithOptions(
                     decimal: true,
                     signed: false,
@@ -102,15 +103,46 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       RegExp(r'^\d+\.?\d{0,2}'),
                     ),
                   ],
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: '金额',
-                    prefixText: '¥ ',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(vertical: 18),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    prefixIcon: const Icon(Icons.currency_yuan, size: 24),
+                    hintText: '0.00',
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2.0,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 18, horizontal: 16),
+                    errorStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
                   ),
-                  style: const TextStyle(
-                    fontSize: 24,
+                  style: TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.end,
                   validator: (value) {
