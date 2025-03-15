@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'expense_model.dart';
 import 'add_expense_screen.dart';
+import 'pie_chart_screen.dart';  // Add import for the new file
 
 const mainColor = Color.fromARGB(255, 247, 236, 236);
 
@@ -79,6 +80,20 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs.setStringList(
         _prefsKey, newList.map((e) => e.toJson()).toList());
     setState(() => _expenses = newList);
+  }
+
+  Future<void> _deleteExpense(String expenseId) async {
+    setState(() {
+      _expenses.removeWhere((expense) => expense.id.toString() == expenseId);
+    });
+    
+    // 保存更新后的列表到SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_prefsKey, _expenses.map((e) => e.toJson()).toList());
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('支出已删除')),
+    );
   }
 
   void _showMonthPicker() {
@@ -201,53 +216,60 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final expense = entry.value[index];
                         return Dismissible(
-                          key: Key(expense.id
-                              .toString()), // Ensure each expense has a unique ID
+                          key: Key(expense.id.toString()),
                           direction: DismissDirection.endToStart,
                           onDismissed: (direction) {
-                            setState(() {
-                              _expenses.removeAt(index);
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Expense deleted')),
-                            );
+                            _deleteExpense(expense.id.toString());
                           },
                           background: Container(
                             color: Colors.red,
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child:
-                                const Icon(Icons.delete, color: Colors.white),
+                            child: const Icon(Icons.delete, color: Colors.white),
                           ),
-                          child: ListTile(
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 16),
-                            title: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  expense.category,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                if (expense.note.isNotEmpty)
+                          // Fix: Update the container to ensure corners are preserved
+                          child: Container(
+                            // Remove the color here as it overrides parent's borderRadius
+                            // The last item needs to respect the parent container's border radius
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              // Apply border radius only to the last item
+                              borderRadius: index == entry.value.length - 1 
+                                ? const BorderRadius.only(
+                                    bottomLeft: Radius.circular(12), 
+                                    bottomRight: Radius.circular(12))
+                                : null,
+                            ),
+                            child: ListTile(
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              title: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    expense.note,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
+                                    expense.category,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                              ],
-                            ),
-                            trailing: Text(
-                              '¥${expense.amount.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.red[700],
+                                  if (expense.note.isNotEmpty)
+                                    Text(
+                                      expense.note,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              trailing: Text(
+                                '¥${expense.amount.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.normal,
+                                  color: Colors.red[700],
+                                ),
                               ),
                             ),
                           ),
@@ -275,58 +297,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Icons.add,
           size: 30,
           color: Colors.white,
-        ),
-      ),
-    );
-  }
-}
-
-class PieChartScreen extends StatelessWidget {
-  final List<Expense> expenses;
-  final DateTime selectedMonth;
-
-  const PieChartScreen(
-      {super.key, required this.expenses, required this.selectedMonth});
-
-  @override
-  Widget build(BuildContext context) {
-    final categoryTotals = <String, double>{};
-    double totalAmount = 0;
-
-    for (var expense in expenses.where((e) =>
-        e.time.month == selectedMonth.month &&
-        e.time.year == selectedMonth.year)) {
-      categoryTotals[expense.category] =
-          (categoryTotals[expense.category] ?? 0) + expense.amount;
-      totalAmount += expense.amount;
-    }
-
-    final pieSections = categoryTotals.entries.map((entry) {
-      final percentage = (entry.value / totalAmount) * 100;
-      final color = Colors.primaries[
-          categoryTotals.keys.toList().indexOf(entry.key) %
-              Colors.primaries.length];
-      return PieChartSectionData(
-        color: color,
-        value: entry.value,
-        title: '${entry.key}\n${percentage.toStringAsFixed(1)}%',
-        titleStyle: const TextStyle(
-            fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-      );
-    }).toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('分类支出饼图'),
-        backgroundColor: Colors.blue,
-      ),
-      body: Center(
-        child: PieChart(
-          PieChartData(
-            sections: pieSections,
-            centerSpaceRadius: 40,
-            sectionsSpace: 2,
-          ),
         ),
       ),
     );
