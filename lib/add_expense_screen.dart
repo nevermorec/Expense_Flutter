@@ -52,7 +52,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('类别', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    const Text('类别',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -101,7 +103,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 ),
               ),
               ListTile(
-                title: const Text('时间', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                title: const Text('时间',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 subtitle: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: _selectDate,
@@ -120,7 +124,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 controller: _amountController,
                 autofocus: true,
                 focusNode: _amountFocusNode,
-                keyboardType: TextInputType.numberWithOptions(
+                keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                   signed: false,
                 ),
@@ -134,7 +138,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   prefixIcon: const Icon(Icons.currency_yuan),
                   hintText: '0.00',
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                  fillColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
                   border: const OutlineInputBorder(),
                 ),
                 style: TextStyle(
@@ -156,6 +161,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     Navigator.pop(
                         context,
                         Expense(
+                          id: DateTime.now().millisecondsSinceEpoch,
                           time: _selectedDate,
                           amount: double.parse(_amountController.text),
                           category: _selectedCategory,

@@ -1,19 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:expense_app/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:azblob/azblob.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'expense_model.dart';
 import 'add_expense_screen.dart';
 
 const mainColor = Color.fromARGB(255, 247, 236, 236);
-
-
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -102,24 +102,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToPieChartScreen() {
-    final entity = {
-      'PartitionKey': 'partition1', // Replace with your partition key
-      'RowKey': 'row1',             // Replace with your row key
-      'Name': 'John Doe',           // Replace with your entity data
-      'Age': 30,                    // Replace with your entity data
-    };
+  void _navigateToPieChartScreen() async {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PieChartScreen(expenses: _expenses, selectedMonth: _selectedMonth),
+        builder: (context) =>
+            PieChartScreen(expenses: _expenses, selectedMonth: _selectedMonth),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final groupedExpenses = _groupExpensesByDate();
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
@@ -206,35 +200,55 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       itemBuilder: (context, index) {
                         final expense = entry.value[index];
-                        return ListTile(
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 16),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                expense.category,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              if (expense.note.isNotEmpty)
+                        return Dismissible(
+                          key: Key(expense.id
+                              .toString()), // Ensure each expense has a unique ID
+                          direction: DismissDirection.endToStart,
+                          onDismissed: (direction) {
+                            setState(() {
+                              _expenses.removeAt(index);
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Expense deleted')),
+                            );
+                          },
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child:
+                                const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          child: ListTile(
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 16),
+                            title: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  expense.note,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
+                                  expense.category,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                            ],
-                          ),
-                          trailing: Text(
-                            '¥${expense.amount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.normal,
-                              color: Colors.red[700],
+                                if (expense.note.isNotEmpty)
+                                  Text(
+                                    expense.note,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            trailing: Text(
+                              '¥${expense.amount.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.normal,
+                                color: Colors.red[700],
+                              ),
                             ),
                           ),
                         );
@@ -257,7 +271,11 @@ class _HomeScreenState extends State<HomeScreen> {
           );
           if (result != null) _addExpense(result);
         },
-        child: const Icon(Icons.add, size: 30, color: Colors.white,),
+        child: const Icon(
+          Icons.add,
+          size: 30,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -267,7 +285,8 @@ class PieChartScreen extends StatelessWidget {
   final List<Expense> expenses;
   final DateTime selectedMonth;
 
-  const PieChartScreen({Key? key, required this.expenses, required this.selectedMonth}) : super(key: key);
+  const PieChartScreen(
+      {super.key, required this.expenses, required this.selectedMonth});
 
   @override
   Widget build(BuildContext context) {
@@ -284,12 +303,15 @@ class PieChartScreen extends StatelessWidget {
 
     final pieSections = categoryTotals.entries.map((entry) {
       final percentage = (entry.value / totalAmount) * 100;
-      final color = Colors.primaries[categoryTotals.keys.toList().indexOf(entry.key) % Colors.primaries.length];
+      final color = Colors.primaries[
+          categoryTotals.keys.toList().indexOf(entry.key) %
+              Colors.primaries.length];
       return PieChartSectionData(
         color: color,
         value: entry.value,
         title: '${entry.key}\n${percentage.toStringAsFixed(1)}%',
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
       );
     }).toList();
 

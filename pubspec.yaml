@@ -13,9 +13,9 @@ dependencies:
   intl: ^0.19.0
   flutter_date_pickers: ^0.4.3
   fl_chart: ^0.70.2
-  http: ^1.3.0
-  crypto: ^3.0.6
-  tencentcloud_cos_sdk_plugin: ^1.2.0
+  azblob: ^4.0.0
+  path_provider: ^2.1.5
+  permission_handler: ^11.4.0
 
 dev_dependencies:
   flutter_test:
