@@ -1,18 +1,17 @@
-import 'dart:convert';
-import 'dart:io';
+import 'dart:developer';
 
-import 'package:expense_app/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:azblob/azblob.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import 'expense_model.dart';
 import 'add_expense_screen.dart';
-import 'pie_chart_screen.dart';  // Add import for the new file
+import 'pie_chart_screen.dart';
+import 'settings_screen.dart';
+import 'app_state.dart';  // Add import for app state
 
 const mainColor = Color.fromARGB(255, 247, 236, 236);
 
@@ -61,6 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadExpenses();
+    _initializeAppState();
+  }
+
+  Future<void> _initializeAppState() async {
+    await appState.initialize();
+    setState(() {});  // Refresh UI with loaded family ID
   }
 
   Future<void> _loadExpenses() async {
@@ -75,25 +80,51 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _addExpense(Expense newExpense) async {
+    // Save to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final newList = [..._expenses, newExpense];
     await prefs.setStringList(
         _prefsKey, newList.map((e) => e.toJson()).toList());
+    
+    // Save to server
+    try {
+      final response = await http.post(
+        Uri.parse('https://741096681b.azurewebsites.net/api/insert_expense?code=W_G0YXjFfMVtDcoAjE9v7mR1RYJb6f_HZFTmMl0R_aZwAzFur7KgPg=='),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id': newExpense.id,
+          'family': appState.familyId,  // Use the global family ID
+          'category': newExpense.category.toInt(),
+          'number': newExpense.amount,
+          'remark': newExpense.note,
+          'date_time': (newExpense.time.millisecondsSinceEpoch / 1000).round(), // Convert to epoch seconds
+        }),
+      );
+      
+      if (response.statusCode != 201) {
+        log('Failed to save expense to server: ${response.body}');
+      }
+    } catch (e) {
+      log('Error sending expense to server: $e');
+    }
+    
     setState(() => _expenses = newList);
   }
 
-  Future<void> _deleteExpense(String expenseId) async {
+  Future<void> _deleteExpense(int expenseId) async { // Changed parameter to int
     setState(() {
-      _expenses.removeWhere((expense) => expense.id.toString() == expenseId);
+      _expenses.removeWhere((expense) => expense.id == expenseId);
     });
     
     // 保存更新后的列表到SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefsKey, _expenses.map((e) => e.toJson()).toList());
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('支出已删除')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('支出已删除')),
+      );
+    }
   }
 
   void _showMonthPicker() {
@@ -125,6 +156,17 @@ class _HomeScreenState extends State<HomeScreen> {
             PieChartScreen(expenses: _expenses, selectedMonth: _selectedMonth),
       ),
     );
+  }
+
+  void _navigateToSettingsScreen() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SettingsScreen(),
+      ),
+    );
+    // No need to explicitly reload family ID as it's stored in the global appState
+    setState(() {});  // Refresh UI to reflect any changes
   }
 
   @override
@@ -162,6 +204,10 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.pie_chart),
             onPressed: _navigateToPieChartScreen,
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: _navigateToSettingsScreen,
           ),
         ],
       ),
@@ -219,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           key: Key(expense.id.toString()),
                           direction: DismissDirection.endToStart,
                           onDismissed: (direction) {
-                            _deleteExpense(expense.id.toString());
+                            _deleteExpense(expense.id); // Using int id
                           },
                           background: Container(
                             color: Colors.red,
@@ -247,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    expense.category,
+                                    expense.category.toDisplayString(),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,

@@ -16,14 +16,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _noteController = TextEditingController();
   final FocusNode _amountFocusNode = FocusNode();
   DateTime _selectedDate = DateTime.now();
-  String _selectedCategory = '餐饮';
-  final List<String> _categories = ['餐饮', '交通', '购物', '娱乐', '其他'];
-  final Map<String, IconData> _categoryIcons = {
-    '餐饮': Icons.restaurant,
-    '交通': Icons.directions_car,
-    '购物': Icons.shopping_cart,
-    '娱乐': Icons.movie,
-    '其他': Icons.more_horiz,
+  ExpenseCategory _selectedCategory = ExpenseCategory.dining;
+  final Map<ExpenseCategory, IconData> _categoryIcons = {
+    ExpenseCategory.dining: Icons.restaurant,
+    ExpenseCategory.transport: Icons.directions_car,
+    ExpenseCategory.shopping: Icons.shopping_cart,
+    ExpenseCategory.entertainment: Icons.movie,
+    ExpenseCategory.other: Icons.more_horiz,
   };
 
   Future<void> _selectDate() async {
@@ -36,7 +35,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme,
-            dialogBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            dialogTheme: DialogTheme(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            ),
           ),
           child: child!,
         );
@@ -75,7 +76,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   margin: const EdgeInsets.only(bottom: 20.0),
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceVariant.withOpacity(0.5),
+                    color: colorScheme.surfaceContainerHighest.withAlpha((0.5 * 255).toInt()),
                     borderRadius: BorderRadius.circular(16.0),
                   ),
                   child: Row(
@@ -147,7 +148,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
-                      children: _categories.map((category) {
+                      children: _categoryIcons.keys.map((category) {
                         final isSelected = _selectedCategory == category;
                         return AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -164,7 +165,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    category,
+                                    category.toDisplayString(),
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
@@ -175,7 +176,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             ),
                             selected: isSelected,
                             showCheckmark: false,
-                            backgroundColor: colorScheme.surfaceVariant,
+                            backgroundColor: colorScheme.surfaceContainerHighest,
                             selectedColor: colorScheme.primary,
                             onSelected: (selected) {
                               setState(() {
@@ -203,9 +204,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceVariant.withOpacity(0.3),
+                      color: colorScheme.surfaceContainerHighest.withAlpha((0.3 * 255).toInt()),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+                      border: Border.all(color: colorScheme.outline.withAlpha((0.3 * 255).toInt())),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -250,7 +251,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
+                      borderSide: BorderSide(color: colorScheme.outline.withAlpha((0.5 * 255).toInt())),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -272,7 +273,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       Navigator.pop(
                           context,
                           Expense(
-                            id: DateTime.now().millisecondsSinceEpoch,
+                            // id
+                            id: (DateTime.now().millisecondsSinceEpoch/1000).round(),
                             time: _selectedDate,
                             amount: double.parse(_amountController.text),
                             category: _selectedCategory,

@@ -1,87 +1,94 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'expense_model.dart';
+import 'dart:developer';
+import 'app_state.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ExpenseApp());
-
-  // String SECRET_ID = "SECRETID"; //永久密钥 secretId
-  // String SECRET_KEY = "SECRETKEY"; //永久密钥 secretKey
-
-  // Cos().initWithPlainSecret(SECRET_ID, SECRET_KEY);
-
-  // String region = "ap-guangzhou";
-  // // 创建 CosXmlServiceConfig 对象，根据需要修改默认的配置参数
-  // CosXmlServiceConfig serviceConfig = CosXmlServiceConfig(
-  //   region: region,
-  //   isDebuggable: true,
-  //   isHttps: true,
-  // );
-  // // 注册默认 COS Service
-  // Cos().registerDefaultService(serviceConfig);
-
-  // // 创建 TransferConfig 对象，根据需要修改默认的配置参数
-  // // TransferConfig 可以设置智能分块阈值 默认对大于或等于2M的文件自动进行分块上传，可以通过如下代码修改分块阈值
-  // TransferConfig transferConfig = TransferConfig(
-  //   forceSimpleUpload: false,
-  //   enableVerification: true,
-  //   divisionForUpload: 2097152, // 设置大于等于 2M 的文件进行分块上传
-  //   sliceSizeForUpload: 1048576, //设置默认分块大小为 1M
-  // );
-  // // 注册默认 COS TransferManger
-  // await Cos().registerDefaultTransferManger(serviceConfig, transferConfig);
-
-  // CosTransferManger transferManager = Cos().getDefaultTransferManger();
-  // //CosTransferManger transferManager = Cos().getTransferManger("newRegion");
-  // // 存储桶名称，由 bucketname-appid 组成，appid 必须填入，可以在 COS 控制台查看存储桶名称。 https://console.cloud.tencent.com/cos5/bucket
-  // String bucket = "7419-1301953042";
-  // String cosPath = "exampleobject"; //对象在存储桶中的位置标识符，即称对象键
-  // String srcPath = "本地文件的绝对路径"; //本地文件的绝对路径
-  // //若存在初始化分块上传的 UploadId，则赋值对应的 uploadId 值用于续传；否则，赋值 null
-  // String? _uploadId;
-
-  // successCallBack(clientException, serviceException) {
-  //   // todo 上传成功后的逻辑
-  // }
-  // //上传失败回调
-  // failCallBack(clientException, serviceException) {
-  //   // todo 上传失败后的逻辑
-  //   if (clientException != null) {
-  //     debugPrint(clientException);
-  //   }
-  //   if (serviceException != null) {
-  //     debugPrint(serviceException);
-  //   }
-  // }
-
-  // transferManager.upload(
-  //   bucket,
-  //   cosPath,
-  //   filePath: srcPath,
-  //   uploadId: _uploadId,
-  //   resultListener: ResultListener(successCallBack, failCallBack),
-  // );
+  await appState.initialize();
+  runApp(const MyApp());
 }
 
-class ExpenseApp extends StatelessWidget {
-  const ExpenseApp({super.key});
+Future<void> _loadInitialData() async {
+  try {
+    await fetchAndStoreExpenses();
+    log('Successfully loaded initial expenses data', name: 'main');
+  } catch (e) {
+    log('Error during initial data loading: $e', name: 'main');
+    // The app will continue running even if data loading fails
+  }
+}
+
+Future<void> fetchAndStoreExpenses() async {
+  try {
+    // Replace with your actual API endpoint
+    final response = await http.get(Uri.parse('https://741096681b.azurewebsites.net/api/get_expense?code=Rmqdo1AWI9aLw81DkenDLbJKt0jmVcLGCI0s1CYaWL-4AzFun7xd6w%3D%3D'));
+    
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      final List<dynamic> expensesJson = jsonData['expenses'];
+      
+      final prefs = await SharedPreferences.getInstance();
+      final existingExpensesJson = prefs.getStringList('expenses') ?? [];
+      final existingExpenses = existingExpensesJson
+          .map((e) => Expense.fromJson(e))
+          .toList();
+      
+      // Convert server expenses to our Expense model
+      final serverExpenses = expensesJson.map((e) {
+        return Expense(
+          id: e['id'], // Now using int directly
+          category: ExpenseCategoryExtension.fromInt(e['category']),
+          amount: e['number'].toDouble(),
+          note: e['remark'].toString().replaceAll('"', ''),
+          time: DateTime.fromMillisecondsSinceEpoch(e['data_time']*1000), // Using current time as the server data doesn't include time
+          family: e['family']?.toString().trim() ?? '',
+        );
+      }).toList();
+      
+      // Merge with existing expenses (avoid duplicates by ID)
+      final Map<int, Expense> mergedExpenses = {}; // Changed to int key
+      
+      // Add existing expenses to the map
+      for (var expense in existingExpenses) {
+        mergedExpenses[expense.id] = expense;
+      }
+      
+      // Add/replace with server expenses
+      for (var expense in serverExpenses) {
+        mergedExpenses[expense.id] = expense;
+      }
+      
+      // Save the merged expenses
+      await prefs.setStringList(
+        'expenses', 
+        mergedExpenses.values.map((e) => e.toJson()).toList()
+      );
+    } else {
+      log('Server returned status code ${response.statusCode}', name: 'fetchAndStoreExpenses');
+    }
+  } catch (e) {
+    log('Error fetching expenses: $e', name: 'fetchAndStoreExpenses');
+    // Allow the app to continue even if fetching fails
+  }
+}
+
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '智能记账本',
+      title: 'Expense Tracker',
       theme: ThemeData(
-        primarySwatch: Colors.blueGrey,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.blueGrey,
-          foregroundColor: Colors.white,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Colors.blueGrey,
-        ),
+        primarySwatch: Colors.blue,
       ),
       home: const HomeScreen(),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
