@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package expense;
+
+// Define the request message
+message ExpenseRequest {
+  string user_id = 1;
+}
+
+// Define the response message
+message ExpenseResponse {
+  string message = 1;
+}
+
+// Define the service
+service ExpenseService {
+  rpc GetExpense(ExpenseRequest) returns (ExpenseResponse);
+}
