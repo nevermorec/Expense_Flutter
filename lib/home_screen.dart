@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Save to server
     try {
       final response = await http.post(
-        Uri.parse('https://741096681b.azurewebsites.net/api/insert_expense?code=W_G0YXjFfMVtDcoAjE9v7mR1RYJb6f_HZFTmMl0R_aZwAzFur7KgPg=='),
+        Uri.parse('https://741096681c.azurewebsites.net/api/add_expense?code=UrW2LL7OQg7iV8ZXCoXXB5VLzbEpOBMmgkub9lcD3si1AzFuW_3EaA%3D%3D'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': newExpense.id,
@@ -119,6 +119,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // 保存更新后的列表到SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefsKey, _expenses.map((e) => e.toJson()).toList());
+
+    http.get(
+      Uri.parse('https://741096681c.azurewebsites.net/api/delete_expense/${expenseId.toString()}/${appState.familyId}?code=-SVXDqgYhYaPPodhMD74Lh0FHSvTYnDmC2EZZwY05U2PAzFuJEzxYA%3D%3D')
+    );
+
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -10,6 +10,7 @@ import 'app_state.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await appState.initialize();
+  _loadInitialData();
   runApp(const MyApp());
 }
 
@@ -25,8 +26,9 @@ Future<void> _loadInitialData() async {
 
 Future<void> fetchAndStoreExpenses() async {
   try {
+
     // Replace with your actual API endpoint
-    final response = await http.get(Uri.parse('https://741096681b.azurewebsites.net/api/get_expense?code=Rmqdo1AWI9aLw81DkenDLbJKt0jmVcLGCI0s1CYaWL-4AzFun7xd6w%3D%3D'));
+    final response = await http.get(Uri.parse('https://741096681c.azurewebsites.net/api/get_expense/${appState.familyId}?code=pJQTZnTB45OGUtJrKYCkn3_XukHiAVgCgEYPLPcVlCDWAzFuU8lAVQ%3D%3D'));
     
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
