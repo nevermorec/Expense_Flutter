@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:async'; // Add this import
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -13,8 +14,6 @@ import 'pie_chart_screen.dart';
 import 'settings_screen.dart';
 import 'app_state.dart'; // Add import for app state
 
-const mainColor = Color.fromARGB(255, 247, 236, 236);
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -26,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Expense> _expenses = [];
   final _prefsKey = 'expenses';
   DateTime _selectedMonth = DateTime.now();
+  late StreamSubscription _dataUpdateSubscription;
 
   Map<DateTime, List<Expense>> _groupExpensesByDate() {
     final Map<DateTime, List<Expense>> grouped = {};
@@ -56,6 +56,16 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadExpenses();
     _initializeAppState();
+    // Subscribe to data updates
+    _dataUpdateSubscription = appState.dataUpdates.listen((_) {
+      _loadExpenses();
+    });
+  }
+
+  @override
+  void dispose() {
+    _dataUpdateSubscription.cancel();
+    super.dispose();
   }
 
   Future<void> _initializeAppState() async {
@@ -75,10 +85,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _addExpense(Expense newExpense) async {
+    // Update local state immediately
+    setState(() {
+      _expenses = [..._expenses, newExpense];
+    });
+
     // Save to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    final newList = [..._expenses, newExpense];
-    await prefs.setStringList(_prefsKey, newList.map((e) => e.toJson()).toList());
+    await prefs.setStringList(_prefsKey, _expenses.map((e) => e.toJson()).toList());
 
     // Save to server
     try {
@@ -97,12 +111,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (response.statusCode != 201) {
         log('Failed to save expense to server: ${response.body}');
+        // Optionally, show a snackbar or revert the local change
       }
     } catch (e) {
       log('Error sending expense to server: $e');
+      // Optionally, show a snackbar or revert the local change
     }
-
-    setState(() => _expenses = newList);
   }
 
   Future<void> _deleteExpense(int expenseId) async {
@@ -120,7 +134,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('支出已删除')),
+        const SnackBar(
+          content: Text('支出已删除'),
+          duration: Duration(seconds: 1),
+        ),
       );
     }
   }
@@ -199,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.pie_chart),
+            icon: const Icon(Icons.pie_chart, color: Colors.white),
             onPressed: _navigateToPieChartScreen,
           ),
           IconButton(
@@ -209,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Container(
-        color: mainColor,
+        color: appState.mainColor,
         child: ListView(
           children: [
             ..._groupExpensesByDate().entries.map((entry) {
@@ -328,6 +345,9 @@ class _HomeScreenState extends State<HomeScreen> {
             context: context,
             isScrollControlled: true,
             builder: (context) => const AddExpenseScreen(),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
           );
           if (result != null) _addExpense(result);
         },

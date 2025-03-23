@@ -1,5 +1,6 @@
-
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class AppState {
   // Singleton pattern
@@ -9,9 +10,16 @@ class AppState {
 
   // Key for storing family ID in SharedPreferences
   static const String familyIdKey = 'family_id';
-  
+
   // Default family ID
   String familyId = 'Family';
+
+  final mainColor = Color.fromARGB(255, 247, 236, 236);
+
+  final accentColor = Colors.blue;
+
+  final _dataUpdateController = StreamController<void>.broadcast();
+  Stream<void> get dataUpdates => _dataUpdateController.stream;
 
   // Initialize app state from SharedPreferences
   Future<void> initialize() async {
@@ -24,6 +32,15 @@ class AppState {
     familyId = newFamilyId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(familyIdKey, newFamilyId);
+    notifyDataUpdated();
+  }
+
+  void notifyDataUpdated() {
+    _dataUpdateController.add(null);
+  }
+
+  void dispose() {
+    _dataUpdateController.close();
   }
 }
 
