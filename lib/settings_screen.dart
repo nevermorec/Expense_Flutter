@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'app_state.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -28,7 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _saveFamilyId(String familyId) async {
     await appState.saveFamilyId(familyId);
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('家庭 ID 已保存')),

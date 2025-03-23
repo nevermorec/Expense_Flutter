@@ -11,7 +11,7 @@ import 'expense_model.dart';
 import 'add_expense_screen.dart';
 import 'pie_chart_screen.dart';
 import 'settings_screen.dart';
-import 'app_state.dart';  // Add import for app state
+import 'app_state.dart'; // Add import for app state
 
 const mainColor = Color.fromARGB(255, 247, 236, 236);
 
@@ -29,9 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Map<DateTime, List<Expense>> _groupExpensesByDate() {
     final Map<DateTime, List<Expense>> grouped = {};
-    for (var expense in _expenses.where((e) =>
-        e.time.month == _selectedMonth.month &&
-        e.time.year == _selectedMonth.year)) {
+    for (var expense in _expenses.where((e) => e.time.month == _selectedMonth.month && e.time.year == _selectedMonth.year)) {
       final date = DateTime(
         expense.time.year,
         expense.time.month,
@@ -43,16 +41,13 @@ class _HomeScreenState extends State<HomeScreen> {
       grouped[date]!.add(expense);
     }
     // Sort dates in descending order
-    final sortedEntries = grouped.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key));
+    final sortedEntries = grouped.entries.toList()..sort((a, b) => b.key.compareTo(a.key));
     return Map.fromEntries(sortedEntries);
   }
 
   double _calculateMonthlyTotal() {
     return _expenses
-        .where((expense) =>
-            expense.time.month == _selectedMonth.month &&
-            expense.time.year == _selectedMonth.year)
+        .where((expense) => expense.time.month == _selectedMonth.month && expense.time.year == _selectedMonth.year)
         .fold(0.0, (sum, expense) => sum + expense.amount);
   }
 
@@ -65,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeAppState() async {
     await appState.initialize();
-    setState(() {});  // Refresh UI with loaded family ID
+    setState(() {}); // Refresh UI with loaded family ID
   }
 
   Future<void> _loadExpenses() async {
@@ -83,9 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // Save to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final newList = [..._expenses, newExpense];
-    await prefs.setStringList(
-        _prefsKey, newList.map((e) => e.toJson()).toList());
-    
+    await prefs.setStringList(_prefsKey, newList.map((e) => e.toJson()).toList());
+
     // Save to server
     try {
       final response = await http.post(
@@ -93,38 +87,37 @@ class _HomeScreenState extends State<HomeScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': newExpense.id,
-          'family': appState.familyId,  // Use the global family ID
+          'family': appState.familyId, // Use the global family ID
           'category': newExpense.category.toInt(),
           'number': newExpense.amount,
           'remark': newExpense.note,
           'date_time': (newExpense.time.millisecondsSinceEpoch / 1000).round(), // Convert to epoch seconds
         }),
       );
-      
+
       if (response.statusCode != 201) {
         log('Failed to save expense to server: ${response.body}');
       }
     } catch (e) {
       log('Error sending expense to server: $e');
     }
-    
+
     setState(() => _expenses = newList);
   }
 
-  Future<void> _deleteExpense(int expenseId) async { // Changed parameter to int
+  Future<void> _deleteExpense(int expenseId) async {
+    // Changed parameter to int
     setState(() {
       _expenses.removeWhere((expense) => expense.id == expenseId);
     });
-    
+
     // 保存更新后的列表到SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefsKey, _expenses.map((e) => e.toJson()).toList());
 
-    http.get(
-      Uri.parse('https://741096681c.azurewebsites.net/api/delete_expense/${expenseId.toString()}/${appState.familyId}?code=-SVXDqgYhYaPPodhMD74Lh0FHSvTYnDmC2EZZwY05U2PAzFuJEzxYA%3D%3D')
-    );
+    http.get(Uri.parse(
+        'https://741096681c.azurewebsites.net/api/delete_expense/${expenseId.toString()}/${appState.familyId}?code=-SVXDqgYhYaPPodhMD74Lh0FHSvTYnDmC2EZZwY05U2PAzFuJEzxYA%3D%3D'));
 
-    
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('支出已删除')),
@@ -157,8 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            PieChartScreen(expenses: _expenses, selectedMonth: _selectedMonth),
+        builder: (context) => PieChartScreen(expenses: _expenses, selectedMonth: _selectedMonth),
       ),
     );
   }
@@ -171,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     // No need to explicitly reload family ID as it's stored in the global appState
-    setState(() {});  // Refresh UI to reflect any changes
+    setState(() {}); // Refresh UI to reflect any changes
   }
 
   @override
@@ -188,16 +180,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 '月支出 ${_calculateMonthlyTotal().toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 50),
+              const SizedBox(width: 30),
               Text(
                 DateFormat('yyyy-MM').format(_selectedMonth),
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   color: Colors.white,
                 ),
               ),
@@ -223,9 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ..._groupExpensesByDate().entries.map((entry) {
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.white),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Colors.white),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -285,15 +275,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               // Apply border radius only to the last item
-                              borderRadius: index == entry.value.length - 1 
-                                ? const BorderRadius.only(
-                                    bottomLeft: Radius.circular(12), 
-                                    bottomRight: Radius.circular(12))
-                                : null,
+                              borderRadius: index == entry.value.length - 1
+                                  ? const BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12))
+                                  : null,
                             ),
                             child: ListTile(
-                              contentPadding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                               title: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
