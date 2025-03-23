@@ -41,11 +41,12 @@ Future<void> fetchAndStoreExpenses() async {
 
       // Convert server expenses to our Expense model
       final serverExpenses = jsonData.map((e) {
+        String cleanedRemark = e['remark']?.toString().replaceAll(RegExp('[\\x00]'), "") ?? "";
         return Expense(
           id: e['id'], // Now using int directly
           category: ExpenseCategoryExtension.fromInt(e['category']),
           amount: e['number'].toDouble(),
-          note: e['remark'].toString().replaceAll('"', ''),
+          note: cleanedRemark.trim(),
           time: DateTime.fromMillisecondsSinceEpoch(e['date_time'] * 1000), // Using current time as the server data doesn't include time
           family: e['family']?.toString().trim() ?? '',
         );
