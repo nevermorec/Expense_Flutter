@@ -1,10 +1,10 @@
 import 'dart:developer';
 import 'dart:async'; // Add this import
+import 'package:flutter/services.dart'; // Add this import for SystemUiOverlayStyle
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_date_pickers/flutter_date_pickers.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -13,6 +13,9 @@ import 'add_expense_screen.dart';
 import 'pie_chart_screen.dart';
 import 'settings_screen.dart';
 import 'app_state.dart'; // Add import for app state
+import 'category_icons.dart'; // Add import for category icons
+
+const mainColor = Colors.lightBlue;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _prefsKey = 'expenses';
   DateTime _selectedMonth = DateTime.now();
   late StreamSubscription _dataUpdateSubscription;
+  int _selectedIndex = 0;
 
   Map<DateTime, List<Expense>> _groupExpensesByDate() {
     final Map<DateTime, List<Expense>> grouped = {};
@@ -40,7 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       grouped[date]!.add(expense);
     }
-    // Sort dates in descending order
     final sortedEntries = grouped.entries.toList()..sort((a, b) => b.key.compareTo(a.key));
     return Map.fromEntries(sortedEntries);
   }
@@ -56,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadExpenses();
     _initializeAppState();
-    // Subscribe to data updates
     _dataUpdateSubscription = appState.dataUpdates.listen((_) {
       _loadExpenses();
     });
@@ -70,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeAppState() async {
     await appState.initialize();
-    setState(() {}); // Refresh UI with loaded family ID
+    setState(() {});
   }
 
   Future<void> _loadExpenses() async {
@@ -85,47 +87,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _addExpense(Expense newExpense) async {
-    // Update local state immediately
     setState(() {
       _expenses = [..._expenses, newExpense];
     });
 
-    // Save to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefsKey, _expenses.map((e) => e.toJson()).toList());
 
-    // Save to server
     try {
       final response = await http.post(
         Uri.parse('https://741096681c.azurewebsites.net/api/add_expense?code=UrW2LL7OQg7iV8ZXCoXXB5VLzbEpOBMmgkub9lcD3si1AzFuW_3EaA%3D%3D'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': newExpense.id,
-          'family': appState.familyId, // Use the global family ID
+          'family': appState.familyId,
           'category': newExpense.category.toInt(),
           'number': newExpense.amount,
           'remark': newExpense.note,
-          'date_time': (newExpense.time.millisecondsSinceEpoch / 1000).round(), // Convert to epoch seconds
+          'date_time': (newExpense.time.millisecondsSinceEpoch / 1000).round(),
         }),
       );
 
       if (response.statusCode != 201) {
         log('Failed to save expense to server: ${response.body}');
-        // Optionally, show a snackbar or revert the local change
       }
     } catch (e) {
       log('Error sending expense to server: $e');
-      // Optionally, show a snackbar or revert the local change
     }
   }
 
   Future<void> _deleteExpense(int expenseId) async {
-    // Changed parameter to int
     setState(() {
       _expenses.removeWhere((expense) => expense.id == expenseId);
     });
 
-    // 保存更新后的列表到SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefsKey, _expenses.map((e) => e.toJson()).toList());
 
@@ -140,27 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-  }
-
-  void _showMonthPicker() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: SizedBox(
-          width: 300,
-          height: 400,
-          child: MonthPicker.single(
-            selectedDate: _selectedMonth,
-            firstDate: DateTime(2020),
-            onChanged: (date) {
-              setState(() => _selectedMonth = date);
-              Navigator.pop(context);
-            },
-            lastDate: DateTime.now().add(const Duration(days: 365)),
-          ),
-        ),
-      ),
-    );
   }
 
   void _navigateToPieChartScreen() async {
@@ -179,184 +153,263 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => const SettingsScreen(),
       ),
     );
-    // No need to explicitly reload family ID as it's stored in the global appState
-    setState(() {}); // Refresh UI to reflect any changes
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    // Apply system UI overlay style to match navigation bar with bottom bar
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.white, // Match with BottomNavigationBar color
+      ),
+    );
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.blue,
-        title: InkWell(
-          onTap: _showMonthPicker,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '月支出 ${_calculateMonthlyTotal().toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
+        backgroundColor: mainColor,
+        elevation: 0,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: mainColor,
+              child: const Icon(Icons.person_outline, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left, size: 22),
+                    onPressed: () => _changeMonth(-1),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    color: Colors.white,
+                  ),
+                  GestureDetector(
+                    onTap: _showMonthPicker,
+                    child: Text(
+                      DateFormat('yyyy-MM').format(_selectedMonth),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right, size: 22),
+                    onPressed: () => _changeMonth(1),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    color: Colors.white,
+                  ),
+                ],
               ),
-              const SizedBox(width: 30),
-              Text(
-                DateFormat('yyyy-MM').format(_selectedMonth),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-              const Icon(Icons.arrow_drop_down, color: Colors.white),
-            ],
-          ),
+            ),
+          ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.pie_chart, color: Colors.white),
-            onPressed: _navigateToPieChartScreen,
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: _navigateToSettingsScreen,
-          ),
+          IconButton(icon: const Icon(Icons.notifications_outlined, color: Colors.white), onPressed: () {}),
         ],
       ),
       body: Container(
-        color: appState.mainColor,
-        child: ListView(
+        color: mainColor,
+        child: Column(
           children: [
-            ..._groupExpensesByDate().entries.map((entry) {
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Colors.white),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    '月支出',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '￥${_calculateMonthlyTotal().toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 30,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                color: Colors.grey[200],
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            DateFormat('MM-dd').format(entry.key),
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.normal,
-                              color: Colors.grey[600],
-                            ),
+                    ..._expenses.where((e) => e.time.month == _selectedMonth.month && e.time.year == _selectedMonth.year).take(10).map((expense) {
+                      return Dismissible(
+                        key: Key(expense.id.toString()),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (direction) {
+                          _deleteExpense(expense.id);
+                        },
+                        background: Container(
+                          color: Colors.red,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          alignment: Alignment.centerRight,
+                          child: const Icon(
+                            Icons.delete,
+                            color: Colors.white,
                           ),
-                          Text(
-                            '支:${entry.value.fold(0.0, (sum, e) => sum + e.amount).toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.normal,
-                              color: Colors.grey[600],
+                        ),
+                        child: Card(
+                          elevation: 0,
+                          color: Colors.white,
+                          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.grey[100],
+                              child: _getCategoryIcon(expense.category),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: entry.value.length,
-                      separatorBuilder: (context, index) => Divider(
-                        height: 1,
-                        thickness: 0.5,
-                        color: Colors.grey[200],
-                        indent: 16,
-                        endIndent: 16,
-                      ),
-                      itemBuilder: (context, index) {
-                        final expense = entry.value[index];
-                        return Dismissible(
-                          key: Key(expense.id.toString()),
-                          direction: DismissDirection.endToStart,
-                          onDismissed: (direction) {
-                            _deleteExpense(expense.id); // Using int id
-                          },
-                          background: Container(
-                            color: Colors.red,
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: const Icon(Icons.delete, color: Colors.white),
-                          ),
-                          // Fix: Update the container to ensure corners are preserved
-                          child: Container(
-                            // Remove the color here as it overrides parent's borderRadius
-                            // The last item needs to respect the parent container's border radius
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              // Apply border radius only to the last item
-                              borderRadius: index == entry.value.length - 1
-                                  ? const BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12))
-                                  : null,
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                              title: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    expense.category.toDisplayString(),
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  if (expense.note.isNotEmpty)
-                                    Text(
-                                      expense.note,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                ],
+                            title: Text(
+                              expense.category.toDisplayString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
                               ),
-                              trailing: Text(
-                                '¥${expense.amount.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.normal,
-                                  color: Colors.red[700],
-                                ),
+                            ),
+                            subtitle: Text(
+                              DateFormat('MM-dd').format(expense.time),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                            trailing: Text(
+                              expense.amount > 0 ? '+${expense.amount.toStringAsFixed(2)}' : '-\$${expense.amount.abs().toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
+                                color: expense.amount > 0 ? Colors.green : Colors.red[700],
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
-              );
-            }),
+              ),
+            ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blue,
-        onPressed: () async {
-          final result = await showModalBottomSheet<Expense?>(
-            context: context,
-            isScrollControlled: true,
-            builder: (context) => const AddExpenseScreen(),
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.9,
+      floatingActionButton: Container(
+        width: 56,
+        height: 56,
+        margin: const EdgeInsets.only(right: 10, bottom: 10),
+        child: Material(
+          color: mainColor,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () async {
+              final result = await showModalBottomSheet<Expense?>(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) => const AddExpenseScreen(),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.95,
+                ),
+              );
+              if (result != null) _addExpense(result);
+            },
+            child: const Center(
+              child: Icon(
+                Icons.add,
+                color: Colors.white,
+                size: 30,
+              ),
             ),
-          );
-          if (result != null) _addExpense(result);
-        },
-        child: const Icon(
-          Icons.add,
-          size: 30,
-          color: Colors.white,
+          ),
         ),
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+
+          if (index == 1) {
+            _navigateToPieChartScreen();
+          } else if (index == 3) {
+            _navigateToSettingsScreen();
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        selectedItemColor: mainColor,
+        unselectedItemColor: Colors.grey,
+        iconSize: 28.0, // Increased icon size
+        backgroundColor: Colors.white, // Explicitly set background color
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: '',
+          ),
+        ],
+      ),
     );
+  }
+
+  void _changeMonth(int months) {
+    setState(() {
+      _selectedMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month + months,
+        1,
+      );
+    });
+  }
+
+  void _showMonthPicker() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedMonth,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      initialDatePickerMode: DatePickerMode.year,
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedMonth = DateTime(picked.year, picked.month, 1);
+      });
+    }
+  }
+
+  Widget _getCategoryIcon(ExpenseCategory category) {
+    return CategoryIcons.getIcon(category, color: mainColor);
   }
 }

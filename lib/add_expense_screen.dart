@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'expense_model.dart';
 import 'app_state.dart';
+import 'category_icons.dart'; // Add import for category icons
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -18,13 +19,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final FocusNode _amountFocusNode = FocusNode();
   DateTime _selectedDate = DateTime.now();
   ExpenseCategory _selectedCategory = ExpenseCategory.dining;
-  final Map<ExpenseCategory, IconData> _categoryIcons = {
-    ExpenseCategory.dining: Icons.restaurant,
-    ExpenseCategory.transport: Icons.directions_car,
-    ExpenseCategory.shopping: Icons.shopping_cart,
-    ExpenseCategory.entertainment: Icons.movie,
-    ExpenseCategory.other: Icons.more_horiz,
-  };
+
+  // Replace the hardcoded map with the shared configuration
+  Map<ExpenseCategory, IconData> get _categoryIcons => CategoryIcons.icons;
 
   Future<void> _selectDate() async {
     final pickedDate = await showDatePicker(
